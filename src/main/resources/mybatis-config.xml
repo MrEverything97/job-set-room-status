@@ -13,6 +13,6 @@
         <typeHandler handler="org.apache.ibatis.type.EnumOrdinalTypeHandler"
                      javaType="com.info.model.Enum.RoomStatus"/>
         <typeHandler handler="org.apache.ibatis.type.EnumOrdinalTypeHandler"
-                     javaType="com.info.model.Enum.RoomStatus"/>
+                     javaType="com.info.model.Enum.RoomType"/>
     </typeHandlers>
 </configuration>
