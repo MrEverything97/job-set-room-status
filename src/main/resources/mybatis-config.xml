@@ -12,5 +12,7 @@
     <typeHandlers>
         <typeHandler handler="org.apache.ibatis.type.EnumOrdinalTypeHandler"
                      javaType="com.info.model.Enum.RoomStatus"/>
+        <typeHandler handler="org.apache.ibatis.type.EnumOrdinalTypeHandler"
+                     javaType="com.info.model.Enum.RoomStatus"/>
     </typeHandlers>
 </configuration>

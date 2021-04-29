@@ -1,5 +1,6 @@
 package com.info.controller;
 
+
 import com.info.model.Room;
 import com.info.service.RoomStatusService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.util.List;
 
+
 @Controller
 @CrossOrigin("*")
 @RequestMapping("/api")
@@ -21,10 +23,16 @@ public class RoomStatusController {
 
     @GetMapping("/run")
     private ResponseEntity<?> updateRoomStatus() {
+        roomStatusService.updateRoomStatusWithResident();
+        roomStatusService.updateRoomStatusWithContract();
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+    @GetMapping("/test")
+    private ResponseEntity<?> test() {
         List<Room> roomList = roomStatusService.getAllRoom();
-        if (roomList.size() > 0) {
+        if (roomList.size()>0) {
             return new ResponseEntity<>(roomList, HttpStatus.OK);
-        } else {
+        }else {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }

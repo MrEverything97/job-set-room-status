@@ -9,7 +9,6 @@
         <result column="ROOM_STATUS" property="roomStatus" jdbcType="TINYINT"/>
         <result column="SHARE" property="isShare" jdbcType="BIT"/>
         <result column="MODE_FEE" property="modeFee" jdbcType="TINYINT"/>
-        <result column="END_DATE" property="endDate" jdbcType="DATE"/>
         <association property="resident" javaType="Resident">
             <result column="APT_ID" property="aptId" jdbcType="SMALLINT"/>
             <result column="RESIDENT_ID" property="residentId" jdbcType="SMALLINT"/>
