@@ -1,0 +1,7 @@
+spring:
+  datasource:
+    url: jdbc:mysql://1.55.215.177:3969/infocity?allowMultiQueries=true
+    password: infocity12
+
+server:
+  port: 9191

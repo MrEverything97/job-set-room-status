@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.info.mapper.RoomMapper">
+    <resultMap id="RoomMap" type="Room">
+        <result column="APT_ID" property="aptId" jdbcType="SMALLINT"/>
+        <result column="HO1" property="ho1" jdbcType="VARCHAR"/>
+        <result column="HO2" property="ho2" jdbcType="VARCHAR"/>
+        <result column="ROOM_TP" property="roomType" jdbcType="TINYINT"/>
+        <result column="ROOM_STATUS" property="roomStatus" jdbcType="TINYINT"/>
+        <result column="SHARE" property="isShare" jdbcType="BIT"/>
+        <result column="MODE_FEE" property="modeFee" jdbcType="TINYINT"/>
+        <result column="END_DATE" property="endDate" jdbcType="DATE"/>
+        <association property="resident" javaType="Resident">
+            <result column="APT_ID" property="aptId" jdbcType="SMALLINT"/>
+            <result column="RESIDENT_ID" property="residentId" jdbcType="SMALLINT"/>
+            <result column="HO1" property="ho1" jdbcType="VARCHAR"/>
+            <result column="HO2" property="ho2" jdbcType="VARCHAR"/>
+            <result column="HO3" property="ho3" jdbcType="VARCHAR"/>
+            <result column="RESIDENT_NM" property="residentName" jdbcType="VARCHAR"/>
+            <result column="IS_CONTRACTOR" property="contractor" jdbcType="BIT"/>
+            <result column="BUY_AT" property="buyAt" jdbcType="DATE"/>
+            <result column="SELL_AT" property="sellAt" jdbcType="DATE"/>
+        </association>
+    </resultMap>
+
+    <select id="selectRoomWithResidentByModeFee" resultMap="RoomMap">
+        SELECT A.APT_ID, A.HO1, A.HO2, A.ROOM_TP, A.ROOM_STATUS, B.*, D.MODE_FEE
+        FROM BA_ROOM A
+                 LEFT JOIN CM_RESIDENT B
+                           ON A.APT_ID = B.APT_ID AND A.HO1 = B.HO1 AND A.HO2 = B.HO2 AND B.IS_CONTRACTOR = 1
+                               AND (B.SELL_AT IS NULL OR CURRENT_DATE BETWEEN B.BUY_AT AND B.SELL_AT)
+                 INNER JOIN BA_APT C ON A.APT_ID = C.APT_ID
+                 INNER JOIN BA_INFO_CUSTM D ON C.CUSTM_ID = D.CUSTM_ID
+        WHERE CASE
+                  WHEN D.MODE_FEE = 1 THEN A.ROOM_TP IN (0, 1)
+                  WHEN D.MODE_FEE = 0 THEN A.ROOM_TP = 0
+                  END
+    </select>
+
+    <select id="selectRoomWithContractByModFee" resultMap="RoomMap">
+        SELECT A.APT_ID,
+               A.HO1,
+               A.HO2,
+               A.ROOM_TP,
+               A.ROOM_STATUS,
+               D.MODE_FEE,
+               A.SHARE
+        FROM BA_ROOM A
+                 INNER JOIN BA_APT C ON A.APT_ID = C.APT_ID
+                 INNER JOIN BA_INFO_CUSTM D ON C.CUSTM_ID = D.CUSTM_ID
+        WHERE CASE
+                  WHEN D.MODE_FEE = 1 THEN A.ROOM_TP IN (2, 3, 4, 5)
+                  WHEN D.MODE_FEE = 0 THEN A.ROOM_TP IN (1, 2, 3, 4, 5)
+                  END
+    </select>
+
+    <update id="updateRoomStatus" parameterType="Room">
+        UPDATE BA_ROOM
+        SET ROOM_STATUS = #{roomStatus}
+        WHERE APT_ID = #{aptId}
+          AND HO1 = #{ho1}
+          AND HO2 = #{ho2}
+    </update>
+
+    <select id="isExistContractWithRoom" resultType="boolean">
+        SELECT COUNT(*)
+        FROM RM_CONTRACT_ROOM A
+                 INNER JOIN BA_ROOM B ON A.APT_ID = B.APT_ID AND A.HO1 = B.HO1 AND A.HO2 = B.HO2
+                 INNER JOIN RM_CONTRACT C ON A.CON_ID = C.CON_ID
+                 LEFT JOIN RM_APPENDIX D ON A.APPENDIX_ID = D.APPENDIX_ID AND D.APR_ST = 2 AND CURRENT_DATE() BETWEEN D.APPLY_FROM AND D.END_DT
+        WHERE A.APT_ID = #{aptId}
+          AND B.HO1 = #{ho1} AND B.HO2 = #{ho2}
+          AND C.STATUS = 2
+          AND CURRENT_DATE() BETWEEN C.START_DT AND C.END_DT
+    </select>
+</mapper>
