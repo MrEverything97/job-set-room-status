@@ -4,5 +4,4 @@ spring:
 #    username: ---
     password: infocity12
 
-server:
-  port: 8181
+
