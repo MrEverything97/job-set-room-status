@@ -1,0 +1,8 @@
+spring:
+  datasource:
+    url: jdbc:mysql://1.55.215.214:3969/tland092020?useUnicode=true&characterEncoding=UTF-8&allowMultiQueries=true
+    username: root
+    password: infocity12
+
+server:
+  port: 8181

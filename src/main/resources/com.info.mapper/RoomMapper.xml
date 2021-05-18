@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.info.mapper.RoomMapper">
+    <resultMap id="RoomMap" type="Room">
+        <result column="APT_ID" property="aptId" jdbcType="SMALLINT"/>
+        <result column="HO1" property="ho1" jdbcType="VARCHAR"/>
+        <result column="HO2" property="ho2" jdbcType="VARCHAR"/>
+        <result property="roomStatus" javaType="com.info.model.Enum.RoomStatus" column="ROOM_STATUS" jdbcType="TINYINT"
+                typeHandler="org.apache.ibatis.type.EnumOrdinalTypeHandler"/>
+        <result column="SHARE" property="isShare" jdbcType="BIT"/>
+    </resultMap>
+
+    <select id="selectRoomWithExpiredConTract" resultMap="RoomMap">
+        SELECT DISTINCT C.APT_ID,
+                        C.HO1,
+                        C.HO2,
+                        C.SHARE,
+                        C.ROOM_STATUS
+        FROM RM_CONTRACT A
+                 INNER JOIN RM_CONTRACT_ROOM B ON A.CON_ID = B.CON_ID
+                 INNER JOIN BA_ROOM C ON B.HO1 = C.HO1 AND B.HO2 = C.HO2 AND B.APT_ID = C.APT_ID
+                 LEFT JOIN RM_APPENDIX D ON B.CON_ID = D.CON_ID AND D.APR_ST = 2
+                 LEFT JOIN RM_APPENDIX_DETAIL E
+                           ON D.APPENDIX_ID = E.APPENDIX_ID AND B.CONTRACT_ROOM_ID = E.ID_ITEM AND E.`TYPE` = 1
+                 INNER JOIN BA_APT APT ON APT.APT_ID = A.APT_ID
+                 INNER JOIN BA_INFO_CUSTM INFO_CUS ON APT.CUSTM_ID = INFO_CUS.CUSTM_ID
+        WHERE A.STATUS = 2
+          AND CASE
+                  WHEN (B.APPENDIX_ID = 0 AND B.CON_ID) THEN
+                      A.END_DT <![CDATA[<=]]> CURRENT_DATE()
+                  WHEN (B.APPENDIX_ID > 0 AND B.APPENDIX_ID NOT IN (SELECT AP1.APPENDIX_ID FROM RM_APPENDIX_DETAIL AP1))
+                      THEN
+                      D.END_DT <![CDATA[<=]]> CURRENT_DATE()
+                  WHEN (B.APPENDIX_ID > 0 AND B.APPENDIX_ID IN (SELECT AP2.APPENDIX_ID FROM RM_APPENDIX_DETAIL AP2))
+                      THEN E.END_DATE <![CDATA[<=]]> CURRENT_DATE()
+            END
+          AND CASE
+                  WHEN INFO_CUS.MODE_FEE = 1 THEN C.ROOM_TP IN (2, 3, 4, 5)
+                  WHEN INFO_CUS.MODE_FEE = 0 THEN C.ROOM_TP IN (1, 2, 3, 4, 5)
+            END
+    </select>
+
+    <select id="selectRoomWithValidContract" resultMap="RoomMap">
+        SELECT C.APT_ID,
+               C.HO1,
+               C.HO2,
+               C.SHARE,
+               C.ROOM_STATUS
+        FROM RM_CONTRACT A
+                 INNER JOIN RM_CONTRACT_ROOM B ON A.CON_ID = B.CON_ID
+                 INNER JOIN BA_ROOM C ON B.HO1 = C.HO1 AND B.HO2 = C.HO2 AND B.APT_ID = C.APT_ID
+                 LEFT JOIN RM_APPENDIX D
+                           ON B.CON_ID = D.CON_ID AND D.APR_ST = 2
+                 LEFT JOIN RM_APPENDIX_DETAIL E
+                           ON D.APPENDIX_ID = E.APPENDIX_ID AND B.CONTRACT_ROOM_ID = E.ID_ITEM AND E.`TYPE` = 1
+                 INNER JOIN BA_APT APT ON APT.APT_ID = A.APT_ID
+                 INNER JOIN BA_INFO_CUSTM INFO_CUS ON APT.CUSTM_ID = INFO_CUS.CUSTM_ID
+        WHERE A.STATUS = 2
+          AND A.CON_ID NOT IN (
+            SELECT H.CON_ID
+            FROM RM_CONTRACT_TERM_H H
+        )
+          AND CASE
+                  WHEN (B.APPENDIX_ID = 0)
+                      THEN A.START_DT <![CDATA[<=]]> CURRENT_DATE() AND CURRENT_DATE() <![CDATA[<]]> A.END_DT
+                  WHEN (B.APPENDIX_ID > 0 AND B.APPENDIX_ID NOT IN (SELECT AP1.APPENDIX_ID FROM RM_APPENDIX_DETAIL AP1))
+                      THEN D.APPENDIX_DT <![CDATA[<=]]> CURRENT_DATE() AND CURRENT_DATE() <![CDATA[<]]> D.END_DT
+                  WHEN (B.APPENDIX_ID > 0 AND B.APPENDIX_ID IN (SELECT AP1.APPENDIX_ID FROM RM_APPENDIX_DETAIL AP1))
+                      THEN E.START_DATE <![CDATA[<=]]> CURRENT_DATE() AND CURRENT_DATE() <![CDATA[<]]> E.END_DATE
+            END
+          AND B.APPENDIX_ID = (SELECT MAX(R.APPENDIX_ID) FROM RM_CONTRACT_ROOM R WHERE R.CON_ID = B.CON_ID)
+          AND CASE
+                  WHEN INFO_CUS.MODE_FEE = 1 THEN C.ROOM_TP IN (2, 3, 4, 5)
+                  WHEN INFO_CUS.MODE_FEE = 0 THEN C.ROOM_TP IN (1, 2, 3, 4, 5)
+            END
+    </select>
+
+    <select id="selectRoomHasContractor" resultMap="RoomMap">
+        SELECT A.APT_ID,
+               A.HO1,
+               A.HO2,
+               B.ROOM_STATUS
+        FROM CM_RESIDENT A
+                 INNER JOIN BA_ROOM B ON A.APT_ID = B.APT_ID AND A.HO1 = B.HO1 AND A.HO2 = B.HO2
+                 INNER JOIN BA_APT APT ON APT.APT_ID = A.APT_ID
+                 INNER JOIN BA_INFO_CUSTM INFO_CUS ON APT.CUSTM_ID = INFO_CUS.CUSTM_ID
+        WHERE A.IS_CONTRACTOR = 1
+          AND A.BUY_AT <![CDATA[ <= ]]> CURRENT_DATE ()
+          AND (A.SELL_AT IS NULL OR CURRENT_DATE () <![CDATA[ < ]]> A.SELL_AT)
+          AND CASE
+                  WHEN INFO_CUS.MODE_FEE = 1 THEN B.ROOM_TP IN (0, 1)
+                  WHEN INFO_CUS.MODE_FEE = 0 THEN B.ROOM_TP = 0
+            END
+    </select>
+
+    <select id="selectRoomHasNoContractor" resultMap="RoomMap">
+        SELECT A.APT_ID,
+               A.HO1,
+               A.HO2,
+               B.ROOM_STATUS
+        FROM CM_RESIDENT A
+                 INNER JOIN BA_ROOM B ON A.APT_ID = B.APT_ID AND A.HO1 = B.HO1 AND A.HO2 = B.HO2
+                 INNER JOIN BA_APT APT ON APT.APT_ID = A.APT_ID
+                 INNER JOIN BA_INFO_CUSTM INFO_CUS ON APT.CUSTM_ID = INFO_CUS.CUSTM_ID
+        WHERE A.IS_CONTRACTOR = 1
+          AND A.SELL_AT <![CDATA[ <= ]]> CURRENT_DATE()
+          AND CASE
+                  WHEN INFO_CUS.MODE_FEE = 1 THEN B.ROOM_TP IN (0, 1)
+                  WHEN INFO_CUS.MODE_FEE = 0 THEN B.ROOM_TP = 0
+            END
+    </select>
+
+    <update id="updateBatchRoom" parameterType="java.util.List" useGeneratedKeys="false">
+        <foreach collection="list" item="m" separator=";">
+            UPDATE BA_ROOM
+            SET ROOM_STATUS = #{m.roomStatus.ordinal}
+            WHERE APT_ID = #{m.aptId}
+            AND HO1 = #{m.ho1}
+            AND HO2 = #{m.ho2}
+        </foreach>
+    </update>
+
+</mapper>
